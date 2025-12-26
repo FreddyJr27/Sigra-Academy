@@ -1,19 +1,45 @@
-import GradesModel  from "./grades.model.mjs";
 
-export const getSectionGrades = async (req, res) => {
-    try {
-        const { sectionId } = req.params;
-        if (!sectionId) {
-            return res.status(400).json({ message: "Falta el ID de la sección" });
-        }
-
-        const students = await GradesModel.getStudentsBySection(sectionId);
-        if (students.length === 0) {
-            return res.status(404).json({ message: "No se encontraron estudiantes para esta sección" });
-        }
-
-        res.status(200).json(students);
-    } catch (error) {
-        res.status(500).json({ message: "Error interno del servidor" });
+// Controlador que maneja las solicitudes relacionadas con los registros de calificaciones
+export class GradesLogController {
+    constructor({ModelGradesLog}){
+        this.model = ModelGradesLog;
     }
-};
+
+    // Controlador para obtener los registros de calificaciones por ID de actividad
+    getGradesLogByActivityId = async (req, res) => {
+        const { activityId } = req.params;
+        try{
+            const result = await this.model.getGradesLogByActivityId(activityId);
+            if(result.error) return res.status(404).json({error: result.error});
+            return res.status(200).json({
+                message: result.message,
+                grades: result.grades
+            });
+        }
+        catch(error){
+            console.error('Error en GradesLogController.getGradesLogByActivityId:', error);
+            return res.status(500).json({
+                error: `Error del servidor al obtener los registros de 
+                calificaciones por ID de actividad.`
+            });
+        }
+    }
+
+    // Controlador para obtener todas las calificaciones
+    getAllGradesLog = async (req, res) => {
+        try{
+            const result = await this.model.getAllGradesLog();
+            if(result.error) return res.status(404).json({error: result.error});
+            return res.status(200).json({
+                message: result.message,
+                grades: result.grades
+            });
+        }
+        catch(error){
+            console.error('Error en GradesLogController.getAllGradesLog:', error);
+            return res.status(500).json({
+                error: `Error del servidor al obtener todos los registros de calificaciones.`
+            });
+        }
+    }
+}

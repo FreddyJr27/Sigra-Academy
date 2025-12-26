@@ -1,0 +1,5 @@
+### Obtener todas las calificaciones de una actividad
+GET http://localhost:5200/api/grades-log/activity/1
+
+### Obtener todas las calificaciones registradas
+GET http://localhost:5200/api/grades-log/all
