@@ -1,17 +1,34 @@
-import * as managerModel from './manager.model.mjs'
-import { validateCreateCourse } from './manager.schema.mjs'
+import * as courseModel from './manager.model.mjs'
 
-// Obtener cursos de un estudiante
+/* Controlador para obtener cursos de un estudiante */
 export const getCoursesByStudent = async (req, res) => {
-  
+  try {
+    const { studentId } = req.params
+    const courses = await courseModel.getCoursesByStudentId(studentId)
+    res.json({ success: true, data: courses })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
 }
 
-// Obtener detalle de un curso
+/* Controlador para obtener detalle de un curso */
 export const getCourseDetail = async (req, res) => {
-  
+  try {
+    const { assignmentId } = req.params
+    const course = await courseModel.getCourseById(assignmentId)
+    if (!course) return res.status(404).json({ success: false, message: 'Course not found' })
+    res.json({ success: true, data: course })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
 }
 
-// Crear un nuevo curso
+/* Controlador para crear un nuevo curso */
 export const createCourse = async (req, res) => {
-  
+  try {
+    const result = await courseModel.createCourse(req.body)
+    res.status(201).json({ success: true, data: { insertId: result.insertId } })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
 }
