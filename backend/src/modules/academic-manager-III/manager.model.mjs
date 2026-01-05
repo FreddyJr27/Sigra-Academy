@@ -10,7 +10,7 @@ export const getCoursesByStudentId = async (studentId) => {
             FROM enrollments e
             JOIN sections sec ON e.section_id = sec.section_id
             JOIN grades g ON sec.grade_id = g.grade_id
-            JOIN academic years ay ON sec.academic_year_id = ay.year_id JOIN teacher_assignments ta ON ta.section_id = sec.section_id JOIN subjects s ON ta.subject_id = s.subject_id
+            JOIN academic_years ay ON sec.academic_year_id = ay.year_id JOIN teacher_assignments ta ON ta.section_id = sec.section_id JOIN subjects s ON ta.subject_id = s.subject_id
             WHERE e.student_user_id = ?`,
         [studentId])
 
