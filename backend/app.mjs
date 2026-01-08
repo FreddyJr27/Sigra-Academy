@@ -2,6 +2,8 @@ import express, {json} from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import { SETTINGS } from './config/settings.config.mjs';
+import { ListRoutes } from './src/api/routes/api.routes.mjs';
+import { registerRoutes } from './src/core/utils/function.util.mjs';
 import controlRouter from './src/modules/access-control-I/control.route.mjs';
 import { getUser as getUserModel } from './src/modules/access-control-I/control.model.mjs';
 import { subjectRoute } from './src/modules/academic-structure-II/subjects/subjects.route.mjs';
@@ -21,6 +23,7 @@ app.get('/', (req, res) => {
     res.send('Servidor funcionando correctamente');
 });
 
+registerRoutes(app, ListRoutes);
 // Montar rutas de access-control
 app.use('/api/access-control', controlRouter);
 
