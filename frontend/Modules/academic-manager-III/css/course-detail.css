@@ -28,7 +28,7 @@ body {
     border-radius: 8px;
     padding: 32px;
     margin-bottom: 16px;
-    background-image: url('https://www.gstatic.com/classroom/themes/img_code.jpg'); /* Imagen genérica de Classroom */
+    background-image: url('../../../Public/resources/Modulo-3/user-logo.png'); /* Imagen genérica de Classroom */
     background-size: cover;
     background-position: center;
     position: relative;

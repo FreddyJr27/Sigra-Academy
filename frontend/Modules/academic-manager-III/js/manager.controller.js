@@ -6,15 +6,15 @@ const STUDENT_ID = storedUser ? storedUser.user_id : 3;
 
 // Mapeo de materias a imágenes
 const courseImages = {
-  'Matemáticas I': '../../Public/resources/Modulo-3/mateLogo.jpg',
-  'Matemáticas III': '../../Public/resources/Modulo-3/mateLogo.jpg',
-  'Ciencias Naturales I': '../../Public/resources/Modulo-3/biologiaLogo.jpg',
-  'Historia y Geografía': '../../Public/resources/Modulo-3/castellanoLogo.jpg',
-  'Ciencias Sociales': '../../Public/resources/Modulo-3/castellanoLogo.jpg',
-  'Comunicación y Lenguaje': '../../Public/resources/Modulo-3/castellanoLogo.jpg',
-  'Física': '../../Public/resources/Modulo-3/fisicaLogo.jpg',
-  'Química': '../../Public/resources/Modulo-3/quimicaLogo.jpg',
-  'Biología': '../../Public/resources/Modulo-3/biologiaLogo.jpg'
+  'Matemáticas I': '../../../Public/resources/Modulo-3/mateLogo.jpg',
+  'Matemáticas III': '../../../Public/resources/Modulo-3/mateLogo.jpg',
+  'Ciencias Naturales I': '../../../Public/resources/Modulo-3/biologiaLogo.jpg',
+  'Historia y Geografía': '../../../Public/resources/Modulo-3/castellanoLogo.jpg',
+  'Ciencias Sociales': '../../../Public/resources/Modulo-3/castellanoLogo.jpg',
+  'Comunicación y Lenguaje': '../../../Public/resources/Modulo-3/castellanoLogo.jpg',
+  'Física': '../../../Public/resources/Modulo-3/fisicaLogo.jpg',
+  'Química': '../../../Public/resources/Modulo-3/quimicaLogo.jpg',
+  'Biología': '../../../Public/resources/Modulo-3/biologiaLogo.jpg'
 }
 
 // Función para cargar los cursos del estudiante
@@ -73,9 +73,8 @@ async function viewCourseDetail(assignmentId) {
     const data = await response.json()
     
     if (data.success) {
-      console.log('Detalles del curso:', data.data)
-      // Aquí puedes redirigir a otra página o mostrar un modal con los detalles
-      alert(`Curso: ${data.data.subject_name}\nProfesor: ${data.data.teacher_name}`)
+      // Redirigir a la vista de detalle pasando el assignmentId
+      window.location.href = `course-detail.html?assignmentId=${assignmentId}`
     }
   } catch (error) {
     console.error('Error al cargar detalles:', error)

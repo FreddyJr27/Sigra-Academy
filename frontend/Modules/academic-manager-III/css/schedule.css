@@ -81,6 +81,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    background-image: url('../../../Public/resources/Modulo-3/user-logo.png');
     cursor: pointer;
     transition: background-color 0.2s;
 }

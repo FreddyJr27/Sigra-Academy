@@ -23,6 +23,7 @@ export const getCourseDetail = async (req, res) => {
   }
 }
 
+/* Controlador para obtener horario de un estudiante */
 export const getScheduleByStudent = async (req, res) => {
   try {
     const { studentId } = req.params
@@ -33,6 +34,7 @@ export const getScheduleByStudent = async (req, res) => {
   }
 }
 
+/* Controlador para obtener actividades de una asignación */
 export const getActivitiesByAssignment = async (req, res) => {
   try {
     const { assignmentId } = req.params;

@@ -59,6 +59,7 @@ export const getCourseById = async (assignmentId) => {
     }
 }
 
+// Obtener horario de un estudiante
 export const getScheduleByStudentId = async (studentId) => {
   try {
     const [rows] = await db.query(
@@ -82,16 +83,17 @@ export const getScheduleByStudentId = async (studentId) => {
         JOIN schedules sch ON sch.assignment_id = ta.assignment_id
         JOIN users u ON ta.teacher_user_id = u.user_id
         WHERE e.student_user_id = ?
-        ORDER BY FIELD(sch.day_of_week,'Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo'),
-                sch.start_time`,
+        ORDER BY FIELD(sch.day_of_week,'Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo'), sch.start_time`,
       [studentId]
     )
+
     return rows
   } catch (error) {
     throw new Error(`Error fetching schedule: ${error.message}`)
   }
 }
 
+// Obtener actividades de una asignación
 export const getActivitiesByAssignmentId = async (assignmentId) => {
   try {
     const [rows] = await db.query(
@@ -107,6 +109,7 @@ export const getActivitiesByAssignmentId = async (assignmentId) => {
   }
 };
 
+// Obtener personas relacionadas a una asignación (profesor y estudiantes)
 export const getPeopleByAssignmentId = async (assignmentId) => {
   try {
     // Obtener la sección y el profesor de la asignación
