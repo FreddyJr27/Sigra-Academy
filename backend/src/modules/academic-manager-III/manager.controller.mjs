@@ -133,11 +133,20 @@ export const getStudentAcademicSummary = async (req, res) => {
   try {
     const { studentId } = req.params
     
+    // 1. Obtenemos los cursos en los que está inscrito
     const courses = await courseModel.getCoursesByStudentId(studentId)
+    
+    // 2. Obtenemos todas sus notas del log
     const gradesResult = await GradesLogModel.getGradesLogByUserId(studentId)
     const grades = gradesResult.grades || []
+
+    // 3. Cruzamos la información de forma precisa
     const summary = courses.map(course => {
-      const courseGrades = grades.filter(grade => grade.section_name === course.section_name)
+      const courseGrades = grades.filter(grade => 
+        grade.section_name === course.section_name && 
+        grade.subject_name === course.subject_name
+      )
+
       return {
         ...course,
         grades: courseGrades
@@ -151,7 +160,7 @@ export const getStudentAcademicSummary = async (req, res) => {
     })
 
   } catch (error) {
-    console.error(error)
+    console.error("Error en getStudentAcademicSummary:", error)
     res.status(500).json({ success: false, message: error.message })
   }
 }

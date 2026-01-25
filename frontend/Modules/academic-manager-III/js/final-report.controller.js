@@ -1,184 +1,111 @@
-const API_BASE = 'http://localhost:3000/api';
-
+const BASE_API = 'http://localhost:5200/api';
 const storedUser = JSON.parse(localStorage.getItem('sigra_user') || 'null');
-const STUDENT_ID = storedUser?.id || storedUser?.user_id || null;
+const STUDENT_ID = storedUser?.id || storedUser?.user_id;
 const TOKEN = localStorage.getItem('sigra_token');
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (storedUser) {
-    document.getElementById('studentName').textContent = `${storedUser.first_name || storedUser.name || ''} ${storedUser.last_name || ''}`.trim();
-    document.getElementById('studentId').textContent = STUDENT_ID ? `ID: ${STUDENT_ID}` : '';
-  }
+    if (!STUDENT_ID) {
+        showError('No se pudo identificar al estudiante.');
+        return;
+    }
+    document.getElementById('studentName').textContent = 
+        `${storedUser.first_name || ''} ${storedUser.last_name || ''}`.trim() || "Estudiante";
+    document.getElementById('studentId').textContent = `ID: ${STUDENT_ID}`;
 
-  if (!STUDENT_ID) {
-    showError('No se encontró información del estudiante en el almacenamiento local.');
-    return;
-  }
-
-  loadFinalGrades();
+    loadReportData();
 });
 
-async function fetchWithAuth(url) {
-  const opts = { headers: {} };
-  if (TOKEN) opts.headers['Authorization'] = `Bearer ${TOKEN}`;
-  const res = await fetch(url, opts);
-  return res;
-}
+async function loadReportData() {
+    const listContainer = document.getElementById('subjectsList');
+    try {
+        const response = await fetch(`${BASE_API}/manager/student/${STUDENT_ID}/summary`, {
+            headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' }
+        });
 
-async function loadFinalGrades() {
-  // Solo usamos el endpoint oficial de logs por usuario
-  let data = null;
-  try {
-    const resUser = await fetchWithAuth(`${API_BASE}/grades-log/user/${STUDENT_ID}`);
-    if (resUser.ok) {
-      const json = await resUser.json();
-      if (json && Array.isArray(json.grades)) data = json.grades;
+        if (!response.ok) throw new Error("Error al obtener el resumen");
+        const json = await response.json();
+        const courses = json.academic_load || [];
+
+        if (courses.length === 0) {
+            listContainer.innerHTML = '<p style="text-align:center; padding:40px;">No hay datos disponibles.</p>';
+            return;
+        }
+        renderSubjects(courses);
+    } catch (error) {
+        showError("Error de conexión con el servidor.");
     }
-  } catch (err) {
-    // silencioso
-  }
-
-  if (!data) {
-    showError('No se pudieron recuperar las notas. Verifique el endpoint del backend.');
-    return;
-  }
-
-  // Ahora, con los registros de user obtenidos (contienen activity_id), buscamos por activity
-  // Extraer activity ids únicos
-  const activityIds = Array.from(new Set(data.map(d => d.activity_id).filter(Boolean)));
-
-  if (activityIds.length === 0) {
-    // Si no hay activity ids, volver a la agrupación simple por lo que venga
-    const grouped = {};
-    data.forEach(item => {
-      const subject = item.subject_name || item.title || 'Sin nombre';
-      if (!grouped[subject]) grouped[subject] = { subject_name: subject, teacher_name: item.teacher_name || '', scores: [] };
-      const score = Number(item.score ?? item.grade ?? item.final_grade ?? 0);
-      if (!Number.isNaN(score)) grouped[subject].scores.push(score);
-    });
-    const subjectsArray = Object.values(grouped).map(g => {
-      const sum = g.scores.reduce((a,b) => a + b, 0);
-      const avg = g.scores.length ? (sum / g.scores.length) : 0;
-      return { subject_name: g.subject_name, teacher_name: g.teacher_name, average: avg };
-    });
-    renderReport(subjectsArray);
-    return;
-  }
-
-  // Consultar detalles por cada activityId en paralelo
-  const activityPromises = activityIds.map(id => fetchWithAuth(`${API_BASE}/grades-log/activity/${id}`).then(r => r.ok ? r.json() : null).catch(() => null));
-  const activityResults = await Promise.all(activityPromises);
-
-  // También pedimos detalles de la actividad (para obtener weight_percentage) desde /activities/activity/{id}
-  const activityDetailPromises = activityIds.map(id => fetchWithAuth(`${API_BASE}/activities/activity/${id}`).then(r => r.ok ? r.json() : null).catch(() => null));
-  const activityDetails = await Promise.all(activityDetailPromises);
-
-
-  // activityResults es array de respuestas { grades: [...] } o null
-  // Recolectar para cada activity la entrada que corresponde al estudiante
-  const subjectMap = {}; // subject_name -> { teacher_name, activities: [{activity_id,title,score}] }
-
-  for (let i = 0; i < activityResults.length; i++) {
-    const resJson = activityResults[i];
-    if (!resJson) continue;
-    const gradesArr = Array.isArray(resJson.grades) ? resJson.grades : (Array.isArray(resJson) ? resJson : []);
-    // Encontrar registro del estudiante
-    const myRecord = gradesArr.find(g => Number(g.student_user_id) === Number(STUDENT_ID) || Number(g.user_id) === Number(STUDENT_ID));
-    // Intentar extraer subject_name y teacher, y title
-    const subjectName = myRecord?.subject_name || (gradesArr[0] && gradesArr[0].subject_name) || 'Sin nombre';
-    const teacherName = myRecord?.teacher_name || (gradesArr[0] && gradesArr[0].teacher_name) || '';
-    const title = myRecord?.title || (gradesArr[0] && gradesArr[0].title) || `Actividad ${activityIds[i]}`;
-    const activityId = activityIds[i];
-    const score = Number(myRecord?.score ?? myRecord?.grade ?? myRecord?.final_grade ?? NaN);
-    if (!Number.isFinite(score)) continue;
-
-    // Obtener detalle de la actividad para peso
-    const detailJson = activityDetails[i];
-    const detail = detailJson && (detailJson.activity || detailJson.activities && detailJson.activities[0]) ? (detailJson.activity || detailJson.activities[0]) : null;
-    const weight = Number(detail?.weight_percentage ?? detail?.weight ?? 0);
-
-    if (!subjectMap[subjectName]) subjectMap[subjectName] = { subject_name: subjectName, teacher_name: teacherName, activities: [], totalWeightEvaluated: 0, totalContribution: 0 };
-    // contribution: score * (weight/100) -> same scale as score (e.g., out of 20)
-    const contribution = Number.isFinite(score) ? (score * (weight / 100)) : 0;
-    subjectMap[subjectName].activities.push({ activity_id: activityId, title, score, weight, contribution });
-    subjectMap[subjectName].totalWeightEvaluated += weight;
-    subjectMap[subjectName].totalContribution += contribution;
-  }
-
-  const subjectsArray = Object.values(subjectMap).map(g => {
-    const avg = g.activities.length ? (g.totalContribution) : 0; // global note already weighted (same scale as raw scores)
-    return { subject_name: g.subject_name, teacher_name: g.teacher_name, average: avg, activities: g.activities, evaluatedPercent: Math.min(100, g.totalWeightEvaluated), totalContribution: g.totalContribution };
-  });
-
-  if (subjectsArray.length === 0) {
-    showError('No se hallaron notas del estudiante dentro de las actividades.');
-    return;
-  }
-
-  renderReport(subjectsArray);
 }
 
-function showError(message) {
-  const container = document.getElementById('subjectsList');
-  container.innerHTML = `<p class="error-msg">${message}</p>`;
-}
+function renderSubjects(courses) {
+    const listContainer = document.getElementById('subjectsList');
+    listContainer.innerHTML = '';
+    
+    let grandTotalAccumulatedPoints = 0; // Suma de todos los puntos de todas las materias
+    const totalSubjectsCount = courses.length; // Cantidad total de materias (ej: 9)
 
-function renderReport(subjects) {
-  // subjects: array de objetos por materia con { subject_name, teacher_name, average }
-  const list = document.getElementById('subjectsList');
-  list.innerHTML = '';
+    courses.forEach(course => {
+        const grades = course.grades || [];
+        let finalGradeOfSubject = 0; // Puntos acumulados en ESTA materia
+        let evaluatedWeight = 0;
 
-  if (!subjects || subjects.length === 0) {
-    list.innerHTML = '<p class="empty">No hay calificaciones disponibles.</p>';
-    return;
-  }
+        const actHtml = grades.map(g => {
+            const weight = Number(g.weight_percentage || 0);
+            const score = Number(g.score || 0);
+            const contribution = (score * weight) / 100;
+            
+            finalGradeOfSubject += contribution;
+            evaluatedWeight += weight;
 
-  // Detectar escala usando valores promedio
-  const maxFound = Math.max(...subjects.map(s => Number(s.average ?? 0)));
-  const scale = maxFound > 20 ? 100 : 20;
+            return `
+                <div class="activity-item">
+                    <div class="act-info">
+                        <span class="act-title">${g.title || 'Actividad'}</span>
+                        <span class="act-meta">Valor: ${weight}%</span>
+                    </div>
+                    <div class="act-values">
+                        <span class="act-score">${score.toFixed(1)}</span>
+                        <span class="act-contrib">+${contribution.toFixed(1)} pts</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
 
-  let sumPercent = 0;
+        // Sumamos los puntos de esta materia al gran total para el promedio final
+        grandTotalAccumulatedPoints += finalGradeOfSubject;
 
-  subjects.forEach(sub => {
-    const grade = Number(sub.average ?? 0);
-    const percent = scale === 0 ? 0 : Math.round((grade / scale) * 100);
-    sumPercent += percent;
+        const article = document.createElement('article');
+        article.className = 'subject-card';
+        article.innerHTML = `
+            <div class="subject-left">
+                <h3 class="subject-name">${course.subject_name}</h3>
+                <div class="subject-meta">Docente: ${course.teacher_name}</div>
+                <div class="grade-meta">Evaluado: ${evaluatedWeight}% del curso</div>
+                <div class="activities-list">${actHtml || '<span class="empty-msg">Sin actividades calificadas</span>'}</div>
+            </div>
+            <div class="subject-right">
+                <div class="grade-number">${finalGradeOfSubject.toFixed(1)}</div>
+                <div class="grade-percent">Puntos acumulados</div>
+            </div>
+        `;
+        listContainer.appendChild(article);
+    });
 
-    const article = document.createElement('article');
-    article.className = 'subject-card';
+    // CÁLCULO SOLICITADO:
+    // Promedio Final = (Suma de puntos acumulados de cada materia) / (Número total de materias)
+    const finalAverageScore = grandTotalAccumulatedPoints / totalSubjectsCount;
 
-    // Build activities list HTML (show weight and contribution)
-    let activitiesHtml = '';
-    if (Array.isArray(sub.activities) && sub.activities.length) {
-      activitiesHtml = '<ul class="activities-list">' + sub.activities.map(a => `
-        <li class="activity-item"><div><span class="act-title">${a.title}</span><div class="act-meta">Peso: ${a.weight}%</div></div> <div><span class="act-score">${Number.isInteger(a.score) ? a.score : a.score.toFixed(2)}</span><div class="act-contrib">+${Number.isFinite(a.contribution) ? (Number.isInteger(a.contribution) ? a.contribution : a.contribution.toFixed(2)) : '0'}</div></div></li>
-      `).join('') + '</ul>';
+    // Actualizar el resumen superior
+    const avgEl = document.getElementById('finalAverage');
+    const statusEl = document.getElementById('finalStatus');
+
+    if (avgEl) avgEl.textContent = finalAverageScore.toFixed(2); // Muestra ej: 0.49 o 12.50
+    
+    // Ocultamos el texto de estado (Aprobado/Reprobado) como solicitaste
+    if (statusEl) {
+        statusEl.style.display = 'none';
     }
-
-    article.innerHTML = `
-      <div class="subject-left">
-        <h3 class="subject-name">${sub.subject_name || 'Sin nombre'}</h3>
-        <div class="subject-meta">${sub.teacher_name ? `Docente: ${sub.teacher_name}` : ''}</div>
-        ${activitiesHtml}
-      </div>
-      <div class="subject-right">
-        <div class="grade-number">${Number.isInteger(grade) ? grade : grade.toFixed(2)}</div>
-        <div class="grade-percent">${percent}%</div>
-        <div class="grade-meta">Evaluado: ${sub.evaluatedPercent}%</div>
-        <div class="grade-status ${percent >= 60 ? 'approved' : 'failed'}">${percent >= 60 ? 'Aprobado' : 'Reprobado'}</div>
-      </div>
-    `;
-
-    list.appendChild(article);
-  });
-
-  const average = Math.round(sumPercent / subjects.length);
-  const finalAvgEl = document.getElementById('finalAverage');
-  const finalStatusEl = document.getElementById('finalStatus');
-  if (finalAvgEl) finalAvgEl.textContent = `${average}%`;
-  if (finalStatusEl) finalStatusEl.textContent = average >= 60 ? 'Aprobado' : 'Reprobado';
 }
 
-window.addEventListener('pageshow', (event) => {
-  if (event.persisted) loadFinalGrades();
-});
+function showError(msg) {
+    document.getElementById('subjectsList').innerHTML = `<p class="error-msg">${msg}</p>`;
+}
