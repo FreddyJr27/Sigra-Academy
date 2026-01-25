@@ -1,4 +1,5 @@
-const API_URL = 'http://localhost:5200/api/manager'; 
+const API_URL = 'http://localhost:5200/api/manager';
+const API_ASSISTANCE = 'http://localhost:5200/api/assistance' 
 const storedUser = JSON.parse(localStorage.getItem('sigra_user') || 'null');
 const STUDENT_ID = storedUser?.id || storedUser?.user_id;
 
@@ -15,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCourseHeader(assignmentId);
     loadActivities(assignmentId);
     loadResources(assignmentId); 
+    registerAccess(assignmentId);
 });
 
 function initTabs() {
@@ -30,6 +32,28 @@ function initTabs() {
             document.getElementById(target).classList.add('active');
         });
     });
+}
+
+async function registerAccess(assignmentId) {
+    try {
+        const response = await fetch(`${API_ASSISTANCE}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                student_user_id: STUDENT_ID,
+                assignment_id: Number(assignmentId)
+            })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            console.log("Asistencia registrada:", result.message);
+        } else {
+            console.warn("No se pudo registrar asistencia:", result.error);
+        }
+    } catch (error) {
+        console.error("Error en el log de asistencia:", error);
+    }
 }
 
 function getIcon(type) {
