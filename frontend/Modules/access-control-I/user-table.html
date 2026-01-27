@@ -515,7 +515,18 @@
         }
 
         const newPassword = (document.getElementById('modal-password')?.value || '').trim()
-        if (newPassword) payload.password = newPassword
+        if (newPassword) {
+          if (newPassword.length < 8 || newPassword.length > 20) {
+            alert('La contraseña debe tener entre 8 y 20 caracteres.')
+            return
+          }
+          const pwdRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[-_+\*\/\?]).+$/
+          if (!pwdRegex.test(newPassword)) {
+            alert('La contraseña debe contener al menos: una letra mayúscula, una letra minúscula, un número y uno de los caracteres permitidos: - _ + * / ?')
+            return
+          }
+          payload.password_hash = newPassword
+        }
 
         // Detectar cambios respecto al usuario actual
         const changed = (

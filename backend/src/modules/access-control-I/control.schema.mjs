@@ -29,6 +29,7 @@ const updateSchemaUser = z.object({
   email: z.string().email().max(100).optional(),
   phone: z.string().min(7).max(15).optional(),
   password_hash: z.string().min(6).max(100).optional(),
+  password: z.string().min(6).max(100).optional(),
   is_active: z.boolean().optional(),
   parents_id: z.string().regex(/^\d+$/,{ message: 'parents_id debe contener solo números' }).min(6).max(20).optional(),
   parents_first_name: z.string().min(1).max(50).optional(),
