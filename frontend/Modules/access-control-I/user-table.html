@@ -515,7 +515,16 @@
         }
 
         const newPassword = (document.getElementById('modal-password')?.value || '').trim()
+        const confirmPassword = (document.getElementById('modal-confirm-password')?.value || '').trim()
         if (newPassword) {
+          if (!confirmPassword) {
+            alert('Confirma la contraseña.')
+            return
+          }
+          if (newPassword !== confirmPassword) {
+            alert('Las contraseñas no coinciden.')
+            return
+          }
           if (newPassword.length < 8 || newPassword.length > 20) {
             alert('La contraseña debe tener entre 8 y 20 caracteres.')
             return
@@ -685,6 +694,10 @@
       <label>
         Contraseña (opcional)
         <input id="modal-password" type="password" placeholder="Dejar en blanco para no cambiar" autocomplete="new-password" />
+      </label>
+      <label>
+        Confirmar Contraseña
+        <input id="modal-confirm-password" type="password" placeholder="Repite la contraseña" autocomplete="new-password" />
       </label>
       <label>
         Teléfono
