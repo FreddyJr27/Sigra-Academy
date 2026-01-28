@@ -655,6 +655,20 @@
       if (loggedRoleIdInit === 4) {
         if (addUserBtn) addUserBtn.style.display = 'none'
         if (profileCreateItem) profileCreateItem.style.display = 'none'
+
+        // Ajustar navbar para rol Control de Estudios (id = 4)
+        const navLinks = document.querySelector('.nav-links')
+        if (navLinks) {
+          const links = [
+            '<a class="active" href="user-table.html" role="listitem">Inicio</a>',
+            '<a href="../academic-structure-II/catalogo-materias/index.html" role="listitem">Catalogo</a>',
+            '<a href="../academic-structure-II/gestion-materias/index.html" role="listitem">Materias</a>',
+            '<a href="../academic-structure-II/definicion-prelaciones/index.html" role="listitem">Prelaciones</a>',
+            '<a href="../academic-structure-II/Gestionar Asignaciones/index.html" role="listitem">Inscripción</a>',
+            '<a href="../academic-structure-II/Gestionar Asignaciones/gestionar-asignacion.html" role="listitem">Gestionar Asignación</a>'
+          ]
+          navLinks.innerHTML = links.join('')
+        }
       }
       if (addUserBtn) {
         addUserBtn.addEventListener('click', () => {
